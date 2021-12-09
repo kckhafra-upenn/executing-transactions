@@ -187,13 +187,13 @@ def address():
         if content['platform'] == "Ethereum":
             #Your code here
             print("ETH",content)
-            print("eth_pk",eth_pk)
-            return jsonify( eth_pk )
+            # print("eth_pk",eth_pk)
+            # return jsonify( eth_pk )
         if content['platform'] == "Algorand":
             #Your code here
             print("ALGO",content)
-            print("algo_pk",algo_pk)
-            return jsonify( algo_pk )
+            # print("algo_pk",algo_pk)
+            # return jsonify( algo_pk )
 
 @app.route('/trade', methods=['POST'])
 def trade():
