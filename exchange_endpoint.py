@@ -16,7 +16,7 @@ import traceback
 # TODO: make sure you implement connect_to_algo, send_tokens_algo, and send_tokens_eth
 from send_tokens import connect_to_algo, connect_to_eth, send_tokens_algo, send_tokens_eth
 
-from models import Base, Order, TX
+from models import Base, Order, TX, Log
 engine = create_engine('sqlite:///orders.db')
 Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
@@ -88,6 +88,10 @@ def connect_to_blockchains():
 
 def log_message(message_dict):
     msg = json.dumps(message_dict)
+    payload = json.dumps(message_dict['payload'])
+    log_obj = Log(message=payload)
+    g.session.add(log_obj)
+    g.session.commit()
 
     # TODO: Add message to the Log table
     
@@ -139,7 +143,33 @@ def execute_txes(txes):
     #          We've provided the send_tokens_algo and send_tokens_eth skeleton methods in send_tokens.py
     #       2. Add all transactions to the TX table
 
-    pass
+def check_sig(payload,signature):
+    if(payload['platform']=="Ethereum"):
+        eth_account.Account.enable_unaudited_hdwallet_features()
+        acct, mnemonic = eth_account.Account.create_with_mnemonic()
+        senderPubKey = payload['sender_pk']
+        # eth_pk = senderPubKey
+        # eth_sk = signature
+        eth_pk = acct.address
+        eth_sk = acct.key
+        p=json.dumps(payload)
+        eth_encoded_msg = eth_account.messages.encode_defunct(text=p)
+        eth_sig_obj = eth_account.Account.sign_message(eth_encoded_msg,eth_sk)
+        if (eth_account.Account.recover_message(eth_encoded_msg,signature=eth_sig_obj.signature.hex())) == eth_pk:
+            return True
+
+    if(payload['platform']=="Algorand"):
+        algo_sk, algo_pk = algosdk.account.generate_account()
+        # algo_sk = payload['sender_pk']
+        # algo_pk= payload['sender_pk']
+        p=json.dumps(payload)
+        algo_sig_str = algosdk.util.sign_bytes(p.encode('utf-8'),algo_sk)
+
+        if (algosdk.util.verify_bytes(p.encode('utf-8'),algo_sig_str,algo_pk)):
+            return True
+
+
+    return False
 
 """ End of Helper methods"""
   
@@ -165,7 +195,7 @@ def address():
 def trade():
     print( "In trade", file=sys.stderr )
     connect_to_blockchains()
-    get_keys()
+    # get_keys()
     if request.method == "POST":
         content = request.get_json(silent=True)
         columns = [ "buy_currency", "sell_currency", "buy_amount", "sell_amount", "platform", "tx_id", "receiver_pk"]
@@ -173,6 +203,7 @@ def trade():
         error = False
         for field in fields:
             if not field in content.keys():
+                log_message(content)
                 print( f"{field} not received by Trade" )
                 error = True
         if error:
@@ -182,6 +213,7 @@ def trade():
         error = False
         for column in columns:
             if not column in content['payload'].keys():
+                log_message(content)
                 print( f"{column} not received by Trade" )
                 error = True
         if error:
@@ -201,14 +233,48 @@ def trade():
         # 4. Execute the transactions
         
         # If all goes well, return jsonify(True). else return jsonify(False)
-        return jsonify(True)
+        signature = content['sig']
+        payload = content['payload']
+        senderPubKey = content['payload']['sender_pk']
+        receiver = content['payload']['receiver_pk']
+        buyCurrency = content['payload']['buy_currency']
+        sellCurrency = content['payload']['sell_currency']
+        buyAmount = content['payload']['buy_amount']
+        sellAmount = content['payload']['sell_amount']
+        verifyer = check_sig(payload,signature)
+        if(verifyer):
+            newOrder={}
+            newOrder = Order(receiver_pk=receiver,sender_pk=senderPubKey,buy_currency=buyCurrency,sell_currency=sellCurrency,buy_amount=buyAmount,sell_amount=sellAmount)
+            g.session.add(newOrder)
+            g.session.commit()
+            return jsonify(True)
+        else:
+            log_message(content)
+            return jsonify(False)
+    
 
 @app.route('/order_book')
 def order_book():
     fields = [ "buy_currency", "sell_currency", "buy_amount", "sell_amount", "signature", "tx_id", "receiver_pk" ]
-    
     # Same as before
-    pass
+    resultDb = {"data": g.session.query(Order).all()}
+    resultArray=[]
+    
+    for x in resultDb['data']:
+        resultDictx={}
+        resultDictx['sender_pk']=x.sender_pk
+        resultDictx['receiver_pk']=x.receiver_pk
+        resultDictx['buy_currency']=x.buy_currency
+        resultDictx['sell_currency']=x.sell_currency
+        resultDictx['buy_amount']=x.buy_amount
+        resultDictx['sell_amount']=x.sell_amount
+        resultDictx['signature']=x.signature
+        resultArray.append(resultDictx)
+    result = {"data":resultArray}
+    # print("RESULT",result)
+    
+    return jsonify(result)
+    # pass
 
 if __name__ == '__main__':
     app.run(port='5002')
