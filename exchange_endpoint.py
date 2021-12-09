@@ -173,23 +173,23 @@ def check_sig(payload,signature):
 
 """ End of Helper methods"""
   
-@app.route('/address', methods=['POST'])
-def address():
-    if request.method == "POST":
-        content = request.get_json(silent=True)
-        if 'platform' not in content.keys():
-            print( f"Error: no platform provided" )
-            return jsonify( "Error: no platform provided" )
-        if not content['platform'] in ["Ethereum", "Algorand"]:
-            print( f"Error: {content['platform']} is an invalid platform" )
-            return jsonify( f"Error: invalid platform provided: {content['platform']}"  )
+# @app.route('/address', methods=['POST'])
+# def address():
+#     if request.method == "POST":
+#         content = request.get_json(silent=True)
+#         if 'platform' not in content.keys():
+#             print( f"Error: no platform provided" )
+#             return jsonify( "Error: no platform provided" )
+#         if not content['platform'] in ["Ethereum", "Algorand"]:
+#             print( f"Error: {content['platform']} is an invalid platform" )
+#             return jsonify( f"Error: invalid platform provided: {content['platform']}"  )
         
-        if content['platform'] == "Ethereum":
-            #Your code here
-            return jsonify( eth_pk )
-        if content['platform'] == "Algorand":
-            #Your code here
-            return jsonify( algo_pk )
+#         if content['platform'] == "Ethereum":
+#             #Your code here
+#             return jsonify( eth_pk )
+#         if content['platform'] == "Algorand":
+#             #Your code here
+#             return jsonify( algo_pk )
 
 @app.route('/trade', methods=['POST'])
 def trade():
