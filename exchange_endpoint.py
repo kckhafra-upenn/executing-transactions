@@ -173,23 +173,27 @@ def check_sig(payload,signature):
 
 """ End of Helper methods"""
   
-# @app.route('/address', methods=['POST'])
-# def address():
-#     if request.method == "POST":
-#         content = request.get_json(silent=True)
-#         if 'platform' not in content.keys():
-#             print( f"Error: no platform provided" )
-#             return jsonify( "Error: no platform provided" )
-#         if not content['platform'] in ["Ethereum", "Algorand"]:
-#             print( f"Error: {content['platform']} is an invalid platform" )
-#             return jsonify( f"Error: invalid platform provided: {content['platform']}"  )
+@app.route('/address', methods=['POST'])
+def address():
+    if request.method == "POST":
+        content = request.get_json(silent=True)
+        if 'platform' not in content.keys():
+            print( f"Error: no platform provided" )
+            return jsonify( "Error: no platform provided" )
+        if not content['platform'] in ["Ethereum", "Algorand"]:
+            print( f"Error: {content['platform']} is an invalid platform" )
+            return jsonify( f"Error: invalid platform provided: {content['platform']}"  )
         
-#         if content['platform'] == "Ethereum":
-#             #Your code here
-#             return jsonify( eth_pk )
-#         if content['platform'] == "Algorand":
-#             #Your code here
-#             return jsonify( algo_pk )
+        if content['platform'] == "Ethereum":
+            #Your code here
+            print("ETH",content)
+            print("eth_pk",eth_pk)
+            return jsonify( eth_pk )
+        if content['platform'] == "Algorand":
+            #Your code here
+            print("ALGO",content)
+            print("algo_pk",algo_pk)
+            return jsonify( algo_pk )
 
 @app.route('/trade', methods=['POST'])
 def trade():
@@ -221,9 +225,18 @@ def trade():
             return jsonify( False )
         
         # Your code here
+        signature = content['sig']
+        payload = content['payload']
+        senderPubKey = content['payload']['sender_pk']
+        receiver = content['payload']['receiver_pk']
+        buyCurrency = content['payload']['buy_currency']
+        sellCurrency = content['payload']['sell_currency']
+        buyAmount = content['payload']['buy_amount']
+        sellAmount = content['payload']['sell_amount']
+        txId = content['payload']['tx_id']
         
         # 1. Check the signature
-        
+        verifyer = check_sig(payload,signature)
         # 2. Add the order to the table
         
         # 3a. Check if the order is backed by a transaction equal to the sell_amount (this is new)
@@ -233,24 +246,17 @@ def trade():
         # 4. Execute the transactions
         
         # If all goes well, return jsonify(True). else return jsonify(False)
-        signature = content['sig']
-        payload = content['payload']
-        senderPubKey = content['payload']['sender_pk']
-        receiver = content['payload']['receiver_pk']
-        buyCurrency = content['payload']['buy_currency']
-        sellCurrency = content['payload']['sell_currency']
-        buyAmount = content['payload']['buy_amount']
-        sellAmount = content['payload']['sell_amount']
-        verifyer = check_sig(payload,signature)
         if(verifyer):
             newOrder={}
-            newOrder = Order(receiver_pk=receiver,sender_pk=senderPubKey,buy_currency=buyCurrency,sell_currency=sellCurrency,buy_amount=buyAmount,sell_amount=sellAmount)
+            newOrder = Order(receiver_pk=receiver,sender_pk=senderPubKey,buy_currency=buyCurrency,sell_currency=sellCurrency,buy_amount=buyAmount,sell_amount=sellAmount,tx_id=txId)
             g.session.add(newOrder)
             g.session.commit()
             return jsonify(True)
         else:
             log_message(content)
             return jsonify(False)
+        
+        
     
 
 @app.route('/order_book')
@@ -269,6 +275,7 @@ def order_book():
         resultDictx['buy_amount']=x.buy_amount
         resultDictx['sell_amount']=x.sell_amount
         resultDictx['signature']=x.signature
+        resultDictx['tx_id']=x.tx_id
         resultArray.append(resultDictx)
     result = {"data":resultArray}
     # print("RESULT",result)
