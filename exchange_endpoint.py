@@ -96,7 +96,7 @@ def log_message(message_dict):
     g.session.add(log_obj)
     g.session.commit()
 
-    # TODO: Add message to the Log table PL
+    # TODO: Add message to the Log table
     
     return
 
