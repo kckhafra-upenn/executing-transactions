@@ -12,6 +12,9 @@ from datetime import datetime
 import math
 import sys
 import traceback
+from algosdk import mnemonic
+from algosdk import account
+from web3 import Web3
 
 # TODO: make sure you implement connect_to_algo, send_tokens_algo, and send_tokens_eth
 from send_tokens import connect_to_algo, connect_to_eth, send_tokens_algo, send_tokens_eth
@@ -101,6 +104,12 @@ def get_algo_keys():
     
     # TODO: Generate or read (using the mnemonic secret) 
     # the algorand public/private keys
+    # algo_sk, algo_pk = algosdk.account.generate_account()
+    # mnemonic_secret = mnemonic.from_private_key(algo_sk)
+    # print("MNE",mnemonic_secret)
+    mnemonic_secret ="decade runway vault bag arrange year fitness tube velvet blur settle floor balance because fluid bus inhale mistake shine wash sound decline approve above enroll"
+    algo_sk = mnemonic.to_private_key(mnemonic_secret)
+    algo_pk = mnemonic.to_public_key(mnemonic_secret)
     
     return algo_sk, algo_pk
 
@@ -109,7 +118,14 @@ def get_eth_keys(filename = "eth_mnemonic.txt"):
     w3 = Web3()
     
     # TODO: Generate or read (using the mnemonic secret) 
-    # the ethereum public/private keys
+    # the ethereum public/private keys\w3.eth.account.enable_unaudited_hdwallet_features()
+    w3.eth.account.enable_unaudited_hdwallet_features()
+    # acct,mnemonic_secret = w3.eth.account.create_with_mnemonic()
+    # print("ETH-MNE",mnemonic_secret)
+    mnemonic_secret="feed return buffalo swallow hollow cloud urge time basic retreat rifle atom"
+    acct = w3.eth.account.from_mnemonic(mnemonic_secret)
+    eth_pk = acct._address
+    eth_sk = acct._private_key
 
     return eth_sk, eth_pk
   
@@ -186,14 +202,16 @@ def address():
         
         if content['platform'] == "Ethereum":
             #Your code here
+            eth_pk=get_eth_keys()[1]
             print("ETH",content)
-            # print("eth_pk",eth_pk)
-            # return jsonify( eth_pk )
+            print("eth_pk",eth_pk)
+            return jsonify( eth_pk )
         if content['platform'] == "Algorand":
             #Your code here
+            algo_pk=get_algo_keys()[1]
             print("ALGO",content)
-            # print("algo_pk",algo_pk)
-            # return jsonify( algo_pk )
+            print("algo_pk",algo_pk)
+            return jsonify( algo_pk )
 
 @app.route('/trade', methods=['POST'])
 def trade():
